@@ -78,6 +78,11 @@ export type GenerateServiceProps = {
    * example: ['result', 'res']
    */
   dataFields?: string[];
+
+  /**
+   * 包装返回结果
+   */
+  wrapResult?: string;
 };
 
 const converterSwaggerToOpenApi = (swagger: any) => {

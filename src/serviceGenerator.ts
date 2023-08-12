@@ -49,11 +49,35 @@ export const getPath = () => {
   return existsSync(join(cwd, 'src')) ? join(cwd, 'src') : cwd;
 };
 
+// 包装对象
+const warpObject = (typeName: string, wrapResult?: string) => {
+  if (wrapResult) {
+    return `${wrapResult}<${typeName}>`;
+  }
+  return typeName;
+}
+
 // 类型声明过滤关键字
-const resolveTypeName = (typeName: string) => {
+const resolveTypeName = (typeName: string, wrapResult? :string) => {  
   if (ReservedDict.check(typeName)) {
     return `__openAPI__${typeName}`;
   }
+  
+  // 判断是不是泛型
+  if (typeName?.includes('`1[[')) {
+
+    // 提取泛型类型
+    var genericType = typeName.split('`1[[').shift().split('.').pop()
+
+    // 提取真实类型
+    const actualType = typeName.split('`1[[').pop()?.split(']]').shift();
+    if (actualType) {
+      const actualTypeName = actualType.split(',')[0].split('.').pop()      
+      const result = `${genericType}<${actualTypeName}>`
+      return warpObject(result, wrapResult)
+    }
+  }
+
   const typeLastName = typeName.split('/').pop().split('.').pop();
 
   const name = typeLastName
@@ -66,7 +90,7 @@ const resolveTypeName = (typeName: string) => {
     return `Pinyin_${name}`
   }
   if (!/[\u3220-\uFA29]/.test(name) && !/^\d$/.test(name)) {
-    return name;
+    return warpObject(name, wrapResult);
   }
   const noBlankName = name.replace(/ +/g, '')
   return pinyin.convertToPinyin(noBlankName, '', true);
@@ -292,7 +316,6 @@ class ServiceGenerator {
 
         tags.forEach((tagString) => {
           const tag = resolveTypeName(tagString);
-
           if (!this.apiData[tag]) {
             this.apiData[tag] = [];
           }
@@ -381,7 +404,7 @@ class ServiceGenerator {
     const namespace = this.config.namespace ? `${this.config.namespace}.` : '';
     const typeName = this.config?.hook?.customTypeName?.(data)
       || this.getFuncationName(data);
-
+    
     return resolveTypeName(`${namespace}${typeName ?? data.operationId}Params`);
   }
 
@@ -654,7 +677,7 @@ class ServiceGenerator {
     }
     return {
       mediaType,
-      type: getType(schema, this.config.namespace),
+      type: warpObject(getType(schema, this.config.namespace), this.config.wrapResult),
     };
   }
 
@@ -719,7 +742,7 @@ class ServiceGenerator {
         if (!defines) {
           return null;
         }
-
+        
         return Object.keys(defines).map((typeName) => {
           const result = this.resolveObject(defines[typeName]);
 
@@ -910,7 +933,7 @@ class ServiceGenerator {
 
     if (schemaObject.properties) {
       const extProps = this.getProps(schemaObject)
-      return { props:[...props, extProps] };
+      return { props: [...props, extProps] };
     }
 
     return { props };
