@@ -58,26 +58,11 @@ const warpObject = (typeName: string, wrapResult?: string) => {
 }
 
 // 类型声明过滤关键字
-const resolveTypeName = (typeName: string, wrapResult? :string) => {  
+const resolveTypeName = (typeName: string) => {  
   if (ReservedDict.check(typeName)) {
     return `__openAPI__${typeName}`;
   }
   
-  // 判断是不是泛型
-  if (typeName?.includes('`1[[')) {
-
-    // 提取泛型类型
-    var genericType = typeName.split('`1[[').shift().split('.').pop()
-
-    // 提取真实类型
-    const actualType = typeName.split('`1[[').pop()?.split(']]').shift();
-    if (actualType) {
-      const actualTypeName = actualType.split(',')[0].split('.').pop()      
-      const result = `${genericType}<${actualTypeName}>`
-      return warpObject(result, wrapResult)
-    }
-  }
-
   const typeLastName = typeName.split('/').pop().split('.').pop();
 
   const name = typeLastName
@@ -90,18 +75,36 @@ const resolveTypeName = (typeName: string, wrapResult? :string) => {
     return `Pinyin_${name}`
   }
   if (!/[\u3220-\uFA29]/.test(name) && !/^\d$/.test(name)) {
-    return warpObject(name, wrapResult);
+    return name;
   }
   const noBlankName = name.replace(/ +/g, '')
   return pinyin.convertToPinyin(noBlankName, '', true);
 };
 
-function getRefName(refObject: any): string {
+function getRefName(refObject: any, namespace: string): string {
   if (typeof refObject !== 'object' || !refObject.$ref) {
     return refObject;
   }
   const refPaths = refObject.$ref.split('/');
-  return resolveTypeName(refPaths[refPaths.length - 1]) as string;
+  const typeName = refPaths[refPaths.length - 1]
+
+  // 判断是不是泛型
+  if (typeName?.includes('`1[[')) {
+
+    // 提取泛型类型
+    var genericType = typeName.split('`1[[').shift().split('.').pop()
+
+    // 提取真实类型
+    const actualType = typeName.split('`1[[').pop()?.split(']]').shift();
+    if (actualType) {
+      const actualTypeName = actualType.split(',')[0].split('.').pop()      
+      const actualTypeNameNs = [namespace, actualTypeName].filter((s) => s).join('.')
+      const result = `${genericType}<${actualTypeNameNs}>`
+      return result
+    }
+  }
+
+  return resolveTypeName(typeName) as string;
 }
 
 const getType = (schemaObject: SchemaObject | undefined, namespace: string = ''): string => {
@@ -112,7 +115,7 @@ const getType = (schemaObject: SchemaObject | undefined, namespace: string = '')
     return schemaObject;
   }
   if (schemaObject.$ref) {
-    return [namespace, getRefName(schemaObject)].filter((s) => s).join('.');
+    return [namespace, getRefName(schemaObject, namespace)].filter((s) => s).join('.');
   }
 
   let { type } = schemaObject as any;
