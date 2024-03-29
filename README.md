@@ -41,3 +41,5 @@ npm run relMgr
 | nullable               | 否   | 使用null代替可选                  | boolean                | false          |
 | dataFields             | 否   | response中数据字段                | string[]               | -              |
 | wrapResult             | 是   | 用来包含response结果的对象        | obj                    | -              |
+
+> 对于`apiPrefix`属性，默认是生成插入值变量，如果需要直接生成字符串，那么需要这样用`apiPrefix:'"apiPrefix"'`
