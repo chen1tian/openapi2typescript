@@ -5,5 +5,5 @@ openAPI.generateService({
   serversPath: './temp/relMgr-api',  
   namespace: 'RelMgr',
   wrapResult: 'Api.Response',
-  apiPrefix: '"relmgr-api"',
+  apiPrefix: '"/relmgr-api"',
 });
